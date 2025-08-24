@@ -1,0 +1,35 @@
+
+services:
+  wa-backend:
+    container_name: wa-backend
+    build: ./backend
+    environment:
+      - NODE_ENV=production
+      - PORT=3010
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+      - CHROMIUM_FLAGS=--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage
+      - SESSIONS_DIR=/app/sessions
+    ports:
+      - "3010:3010"
+    volumes:
+      - wa_sessions:/app/sessions
+    restart: unless-stopped
+    shm_size: "512m"
+
+  wa-frontend:
+    container_name: wa-frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_BACKEND_URL: "http://192.168.31.229:3010"
+    environment:
+      # IMPORTANT: set this to your server's IP so the browser can reach the backend
+      - PORT=3011
+    ports:
+      - "3011:3011"
+    depends_on:
+      - wa-backend
+    restart: unless-stopped
+
+volumes:
+  wa_sessions:
