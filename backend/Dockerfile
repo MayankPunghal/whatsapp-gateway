@@ -15,17 +15,17 @@ WORKDIR /app
 # Dev stage
 FROM base AS dev
 ENV NODE_ENV=development
-COPY package.json ./ 
+COPY package.json ./
 RUN npm install --no-cache
-COPY index.js sessions.js ./
+COPY . .
 EXPOSE 3010
 CMD ["npm", "run", "dev"]
 
 # Production stage
 FROM base AS production
 ENV NODE_ENV=production
-COPY package.json ./ 
-RUN npm install --no-cache --omit=dev
-COPY index.js sessions.js ./
+COPY package.json ./
+RUN npm install --omit=dev --no-cache
+COPY . .
 EXPOSE 3010
 CMD ["node", "index.js"]

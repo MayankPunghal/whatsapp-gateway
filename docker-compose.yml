@@ -9,7 +9,7 @@ services:
       - NODE_ENV=development
       - PORT=3010
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-      - CHROMIUM_FLAGS=--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage --disable-extensions
+      - CHROMIUM_FLAGS=--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage --no-zygote --single-process
       - SESSIONS_DIR=/app/sessions
     ports:
       - "3010:3010"

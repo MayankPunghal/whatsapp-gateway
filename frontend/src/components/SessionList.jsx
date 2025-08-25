@@ -10,6 +10,15 @@ export default function SessionList({ selected, onSelect, onCreated }) {
     setSessions(data.sessions || []);
   };
 
+  const onSessionDeleted = (id) => {
+    setSessions(prev => prev.filter(s => s.id !== id));
+    if (selected === id) onSelect(null);
+  };
+
+  const onSessionLoggedOut = (id) => {
+    setSessions(prev => prev.map(s => s.id === id ? { ...s, status: "disconnected" } : s));
+  };
+
   const add = async () => {
     const id = newId.trim();
     if (!id) return;

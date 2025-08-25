@@ -13,7 +13,7 @@
     "express": "^4.19.2",
     "qrcode": "^1.5.4",
     "socket.io": "^4.7.5",
-    "whatsapp-web.js": "^1.24.0",
+    "whatsapp-web.js": "^1.32.0",
     "winston": "^3.13.0"
   },
   "devDependencies": {
