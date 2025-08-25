@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { apiPost, fileToBase64 } from "../api";
+import { apiPost, fileToBase64, dedupeNumbers } from "../api";
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 export default function Composer({ sessionId, disabled, onLog }) {
   const [to, setTo] = useState("");
   const [text, setText] = useState("");
+  const [delay, setDelay] = useState("1500");
   const [showLocation, setShowLocation] = useState(false);
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
@@ -28,42 +31,48 @@ export default function Composer({ sessionId, disabled, onLog }) {
 
   const send = async () => {
     if (disabled || busy) return;
-    if (!to.trim()) { alert("Enter a recipient phone"); return; }
+    const numbers = dedupeNumbers(to.split(/[\s,]+/));
+    if (numbers.length === 0) { alert("Enter at least one recipient phone"); return; }
+    const delayMs = parseInt(delay, 10);
+    if (isNaN(delayMs) || delayMs < 0) { alert("Invalid delay"); return; }
 
     try {
       setBusy(true);
-      if (files.length === 0 && !showLocation) {
-        const r = await apiPost(`/api/sessions/${sessionId}/sendText`, { to, message: text });
-        if (!r.ok) throw new Error(r.error || "sendText failed");
-        onLog?.(`[send-text] ok -> ${to}`);
-        setText("");
-        return;
-      }
-
-      if (files.length > 0) {
-        const items = files.map(f => ({
-          data: f.b64,
-          mimetype: f.mime,
-          filename: f.name,
-          caption: text || undefined
-        }));
-        const r = await apiPost(`/api/sessions/${sessionId}/sendMedia`, { to, items });
-        if (!r.ok) throw new Error(r.error || "sendMedia failed");
-        onLog?.(`[send-media] ${items.length} file(s) -> ${to}`);
-        setFiles([]); // keep text
-      }
-
-      if (showLocation) {
-        const latNum = parseFloat(lat), lngNum = parseFloat(lng);
-        if (Number.isFinite(latNum) && Number.isFinite(lngNum)) {
-          const r = await apiPost(`/api/sessions/${sessionId}/sendLocation`, { to, lat: latNum, lng: lngNum, description: desc || "" });
-          if (!r.ok) throw new Error(r.error || "sendLocation failed");
-          onLog?.(`[send-location] (${latNum}, ${lngNum}) -> ${to}`);
-          setLat(""); setLng(""); setDesc(""); setShowLocation(false);
+      for (const num of numbers) {
+        if (files.length === 0 && !showLocation) {
+          const r = await apiPost(`/api/sessions/${sessionId}/sendText`, { to: num, message: text });
+          if (!r.ok) throw new Error(r.error || "sendText failed");
+          onLog?.(`[send-text] ok -> ${num}`);
         } else {
-          alert("Invalid latitude/longitude");
+          if (files.length > 0) {
+            const items = files.map(f => ({
+              data: f.b64,
+              mimetype: f.mime,
+              filename: f.name,
+              caption: text || undefined
+            }));
+            const r = await apiPost(`/api/sessions/${sessionId}/sendMedia`, { to: num, items });
+            if (!r.ok) throw new Error(r.error || "sendMedia failed");
+            onLog?.(`[send-media] ${items.length} file(s) -> ${num}`);
+          }
+          if (showLocation) {
+            const latNum = parseFloat(lat), lngNum = parseFloat(lng);
+            if (Number.isFinite(latNum) && Number.isFinite(lngNum)) {
+              const r = await apiPost(`/api/sessions/${sessionId}/sendLocation`, { to: num, lat: latNum, lng: lngNum, description: desc || "" });
+              if (!r.ok) throw new Error(r.error || "sendLocation failed");
+              onLog?.(`[send-location] (${latNum}, ${lngNum}) -> ${num}`);
+            } else {
+              alert("Invalid latitude/longitude");
+            }
+          }
         }
+        if (numbers.length > 1 && delayMs > 0) await sleep(delayMs);
       }
+      // Clear fields after successful broadcast to all
+      setTo("");
+      setText("");
+      setFiles([]);
+      setLat(""); setLng(""); setDesc(""); setShowLocation(false);
     } catch (e) {
       alert(e.message);
     } finally {
@@ -74,8 +83,11 @@ export default function Composer({ sessionId, disabled, onLog }) {
   return (
     <div className="composer">
       <div className="row" style={{gap:8, alignItems:"flex-start"}}>
-        <input className="input-inline to-input" placeholder="recipient phone (e.g., 91999...)"
-               value={to} onChange={e=>setTo(e.target.value)} />
+        <div style={{display:"flex", flexDirection:"column", flex:1}}>
+        <textarea className="textarea to-input" rows={2} placeholder="recipient phones (one per line or comma-separated)"
+                  value={to} onChange={e=>setTo(e.target.value)} />
+          <input className="input-inline delay-input" placeholder="delay (ms)" value={delay} onChange={e=>setDelay(e.target.value)} />
+        </div>
         <textarea className="textarea" rows={3} placeholder="Type a message (supports emojis, *bold*, _italic_, links)"
                   value={text} onChange={e=>setText(e.target.value)} />
         <div className="composer-actions">

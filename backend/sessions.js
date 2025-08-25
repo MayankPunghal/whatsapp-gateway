@@ -74,12 +74,16 @@ export class SessionManager extends EventEmitter {
     rec.status = "initializing";
     this.emit("status", { id, status: "initializing" });
 
-    const emitToSession = (event, payload) => io.to(id).emit(event, { id, ...payload });
+    const emitToSession = (event, payload) => {
+      const timestamp = new Date().toISOString();
+      io.to(id).emit(event, { id, ...payload, timestamp });
+    };
 
     client.on("qr", async (qr) => {
       rec.status = "qr"; this.emit("status", { id, status: "qr" });
       const dataUrl = await QRCode.toDataURL(qr, { errorCorrectionLevel: "M", margin: 1, width: 300 });
       const base64 = dataUrl.split(",")[1];
+      emitToSession("log", { line: `[qr] emitting qr event for session ${id}` });
       emitToSession("qr", { qr: base64 });
       emitToSession("log", { line: "[qr] QR code generated" });
     });

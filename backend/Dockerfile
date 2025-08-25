@@ -1,4 +1,4 @@
-FROM node:18-bullseye-slim
+FROM node:18-bullseye-slim AS base
 
 # Install Chromium & fonts (headless-friendly)
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
@@ -10,15 +10,22 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     rm -rf /var/lib/apt/lists/*
 
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-ENV NODE_ENV=production
 WORKDIR /app
 
-# Dependencies first for better layer cache
-COPY package.json ./
-RUN npm install --omit=dev
-
-# Copy source (context is ./backend)
+# Dev stage
+FROM base AS dev
+ENV NODE_ENV=development
+COPY package.json ./ 
+RUN npm install --no-cache
 COPY index.js sessions.js ./
+EXPOSE 3010
+CMD ["npm", "run", "dev"]
 
+# Production stage
+FROM base AS production
+ENV NODE_ENV=production
+COPY package.json ./ 
+RUN npm install --no-cache --omit=dev
+COPY index.js sessions.js ./
 EXPOSE 3010
 CMD ["node", "index.js"]

@@ -13,6 +13,9 @@ export default function SessionList({ selected, onSelect, onCreated }) {
   const add = async () => {
     const id = newId.trim();
     if (!id) return;
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+      return alert("Session ID can only contain alphanumeric characters, underscores, and hyphens.");
+    }
     const r = await apiPost("/api/sessions", { id });
     if (r.ok) {
       setNewId("");

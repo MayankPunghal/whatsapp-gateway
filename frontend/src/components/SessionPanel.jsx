@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { apiPost, apiDelete, backendBase } from "../api";
 import Composer from "./Composer";
-import BroadcastDrawer from "./BroadcastDrawer";
+
 
 const statusColor = (s) =>
   s === "ready" ? "dot-ready" : s === "qr" ? "dot-qr" : "dot-down";
@@ -12,7 +12,7 @@ export default function SessionPanel({ id }) {
   const [qr, setQr] = useState(null);
   const [logs, setLogs] = useState([]);
   const logsRef = useRef(null);
-  const [openBroadcast, setOpenBroadcast] = useState(false);
+  
 
   const appendLog = (line) => setLogs((prev) => [...prev.slice(-500), `${new Date().toLocaleTimeString()} ${line}`]);
 
@@ -20,6 +20,9 @@ export default function SessionPanel({ id }) {
     if (!id) return;
     const socket = io(backendBase(), { transports: ["websocket"] });
     socket.on("connect", () => { socket.emit("join", { id }); appendLog("[socket] connected"); });
+    socket.onAny((event, ...args) => {
+      appendLog(`[socket] received event: ${event}`);
+    });
     socket.on("qr", ({ qr: b64 }) => { setQr(`data:image/png;base64,${b64}`); setStatus("qr"); appendLog("[qr] received"); });
     socket.on("status", ({ status }) => { setStatus(status); if (status !== "qr") setQr(null); appendLog(`[status] ${status}`); });
     socket.on("log", ({ line }) => appendLog(line));
@@ -50,7 +53,7 @@ export default function SessionPanel({ id }) {
             <button className="btn" onClick={onStart}>Start</button>
             <button className="btn" onClick={onLogout}>Logout</button>
             <button className="btn" onClick={onDelete}>Delete</button>
-            <button className="btn" onClick={()=>setOpenBroadcast(true)}>Broadcast</button>
+            
           </div>
         </div>
       </div>
@@ -81,12 +84,7 @@ export default function SessionPanel({ id }) {
         </div>
       </div>
 
-      <BroadcastDrawer
-        sessionId={id}
-        open={openBroadcast}
-        onClose={()=>setOpenBroadcast(false)}
-        onLog={(m)=>appendLog(m)}
-      />
+      
     </div>
   );
 }

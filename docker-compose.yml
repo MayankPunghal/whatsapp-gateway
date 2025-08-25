@@ -2,31 +2,37 @@
 services:
   wa-backend:
     container_name: wa-backend
-    build: ./backend
+    build:
+      context: ./backend
+      target: dev
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - PORT=3010
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-      - CHROMIUM_FLAGS=--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage
+      - CHROMIUM_FLAGS=--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage --disable-extensions
       - SESSIONS_DIR=/app/sessions
     ports:
       - "3010:3010"
     volumes:
+      - ./backend:/app
+      - /app/node_modules
       - wa_sessions:/app/sessions
     restart: unless-stopped
     shm_size: "512m"
 
   wa-frontend:
     container_name: wa-frontend
-    build:
-      context: ./frontend
-      args:
-        VITE_BACKEND_URL: "http://192.168.31.229:3010"
+    image: node:18-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
     environment:
       # IMPORTANT: set this to your server's IP so the browser can reach the backend
       - PORT=3011
     ports:
       - "3011:3011"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       - wa-backend
     restart: unless-stopped

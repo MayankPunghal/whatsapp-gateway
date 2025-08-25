@@ -41,13 +41,18 @@ app.post("/api/sessions", async (req, res) => {
   try {
     const { id } = req.body || {};
     if (!id) return res.status(400).json({ ok: false, error: "id required" });
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) return res.status(400).json({ ok: false, error: "id must be alphanumeric, underscore or hyphen" });
     await manager.create(id);
     res.json({ ok: true, id });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.post("/api/sessions/:id/start", async (req, res) => {
-  try { res.json({ ok: true, ...(await manager.start(io, req.params.id)) }); }
+  try {
+    const { id } = req.params;
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) return res.status(400).json({ ok: false, error: "id must be alphanumeric, underscore or hyphen" });
+    res.json({ ok: true, ...(await manager.start(io, id)) });
+  }
   catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
